@@ -33,7 +33,7 @@ namespace B2CPolicyManager
         /// Get Token for User.
         /// </summary>
         /// <returns>Token for user.</returns>
-        public static async void ClearCache()
+        public static async Task ClearCacheAsync()
         {
             var accounts = (await _app.GetAccountsAsync()).ToList();
             while (accounts.Any())

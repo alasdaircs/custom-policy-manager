@@ -1,22 +1,19 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
-using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using System.Web;
+
+using Newtonsoft.Json;
+
+#pragma warning disable VSTHRD100 //  Avoid "async void" methods, because any exceptions not handled by the method will crash the process. Event Handlers are an exception.
 
 namespace B2CPolicyManager
 {
@@ -93,12 +90,12 @@ namespace B2CPolicyManager
             else
             {
                 loginBtn.Text = "Login";
-                AuthenticationHelper.ClearCache();
+                await AuthenticationHelper.ClearCacheAsync();
                 policyList.Items.Clear();
             }
         }
 
-        private async void ListBtn_ClickAsync(object sender, EventArgs e)
+        private async void ListBtn_Click(object sender, EventArgs e)
         {
             string token = await AuthenticationHelper.GetTokenForUserAsync();
             if (token != null)
@@ -267,75 +264,6 @@ namespace B2CPolicyManager
             }
         }
 
-        private async void UploadFolderBtn_Click(object sender, EventArgs e)
-        {
-            /*if (policyFolderLbl.Text != "No Folder selected.")
-            {
-                HTTPResponse.AppendText("\r\nUploading selected policies\r\n");
-                string token = await AuthenticationHelper.GetTokenForUserAsync();
-                if (token != null)
-                {
-                    HttpResponseMessage response = null;
-                    string[] fileEntries = checkedPolicyList.CheckedItems.OfType<string>().ToArray();
-                    List<string> fileList = new List<string>(fileEntries);
-
-                    //if we found ext file, move to top
-                    var regexExtensions = @"\w*Extensions\w*";
-                    var indexExtensions = -1;
-                    indexExtensions = fileList.FindIndex(d => regexExtensions.Any(s => Regex.IsMatch(d.ToString(), regexExtensions)));
-                    if (indexExtensions > -1)
-                    {
-                        fileList.Insert(0, fileList[indexExtensions]);
-                        fileList.RemoveAt(indexExtensions + 1);
-                    }
-
-                    //if we found base file, move to top
-                    var regexBase = @"\w*Base\w*";
-                    var indexBase = -1;
-                    indexBase = fileList.FindIndex(d => regexBase.Any(s => Regex.IsMatch(d.ToString(), regexBase)));
-                    if (indexBase > -1)
-                    {
-                        fileList.Insert(0, fileList[indexBase]);
-                        fileList.RemoveAt(indexBase + 1);
-                    }
-
-                    foreach (string file in fileList)
-                    {
-                        HTTPResponse.AppendText(String.Format("Uploading: {0}", file));
-                    }
-                    foreach (string file in fileList)
-                    {
-                        string xml = File.ReadAllText(policyFolderLbl.Text + @"\" + file);
-                        response = await UserMode.HttpPostAsync(Constants.TrustFrameworkPolicesUri, xml);
-                        if (response.IsSuccessStatusCode == false)
-                        {
-                            HTTPResponse.AppendText(await response.Content.ReadAsStringAsync());
-                        }
-                        else
-                        {
-                            HTTPResponse.AppendText("\r\nSuccefully uploaded " + file +"\r\n");
-                        }
-                    }
-
-                    response = await UserMode.HttpGetAsync(Constants.TrustFrameworkPolicesUri);
-                    string content = await response.Content.ReadAsStringAsync();
-                    //HTTPResponse.AppendText(await response.Content.ReadAsStringAsync());
-                    if (response.IsSuccessStatusCode == true)
-                    {
-                        HTTPResponse.AppendText("\r\nSuccessfully updated policy list.\r\n");
-                    }
-                    else
-                    {
-                        HTTPResponse.AppendText(content);
-                    }
-
-                    PolicyList pL = JsonConvert.DeserializeObject<PolicyList>(content);
-
-                    UpdatePolicyList(pL);
-                }
-            }*/
-        }
-
         private async void UpdateAllPolicesBtn_Click(object sender, EventArgs e)
         {
 
@@ -349,39 +277,40 @@ namespace B2CPolicyManager
                 { 
                     HttpResponseMessage response = null;
                     string[] fileEntries = checkedPolicyList.CheckedItems.OfType<string>().ToArray();
-                    List<string> fileList = new List<string>(fileEntries);
 
-                    //if we found ext file, move to top
-                    var regexExtensions = @"\w*Extensions\w*";
-                    var indexExtensions = -1;
-                    indexExtensions = fileList.FindIndex(d => regexExtensions.Any(s => Regex.IsMatch(d.ToString(), regexExtensions)));
-                    if (indexExtensions > -1)
+                    var unorderedPolicies = new List<Policy>();
+                    var orderedPolicies = new List<Policy>();
+
+                    foreach( string file in fileEntries )
                     {
-                        fileList.Insert(0, fileList[indexExtensions]);
-                        fileList.RemoveAt(indexExtensions + 1);
+                        string fileName = Path.Combine(policyFolderLbl.Text, file);
+                        string xml = File.ReadAllText(fileName);
+
+                        // Get policy id and base policy id
+                        XDocument policyFile = XDocument.Parse( xml );
+                        var qualify = ( String name ) => $"{{{policyFile.Root.GetDefaultNamespace()}}}{name}";
+                        unorderedPolicies.Add(
+                            new Policy
+                            {
+                                Text = xml,
+                                Id = policyFile.Root.Attribute("PolicyId").Value,
+                                Base = policyFile.Root.Element(qualify("BasePolicy"))?.Element(qualify("PolicyId"))?.Value
+                            }
+                        );
                     }
 
-                    //if we found base file, move to top
-                    var regexBase = @"\w*Base\w*";
-                    var indexBase = -1;
-                    indexBase = fileList.FindIndex(d => regexBase.Any(s => Regex.IsMatch(d.ToString(), regexBase)));
-                    if (indexBase > -1)
+                    while( unorderedPolicies.Count != 0 )
                     {
-                        fileList.Insert(0, fileList[indexBase]);
-                        fileList.RemoveAt(indexBase + 1);
+                        foreach( var policy in unorderedPolicies.ToArray().Where( p => !unorderedPolicies.Exists( pBase => pBase.Id.Equals( p.Base, StringComparison.OrdinalIgnoreCase ) ) ) )
+                        {
+                            orderedPolicies.Add( policy );
+                            unorderedPolicies.Remove( policy );
+                        };
                     }
 
-
-                    foreach (string file in fileList)
+                    foreach( var policy in orderedPolicies ) 
                     {
-                        string xml = File.ReadAllText(policyFolderLbl.Text + @"\" + file);
-                        string fileName = file.Split('.')[0];
-
-                        //Get actual policy id
-                        XDocument policyFile = XDocument.Parse(xml);
-                        string id = policyFile.Root.Attribute("PolicyId").Value;
-
-                        response = await UserMode.HttpPutIDAsync(Constants.TrustFrameworkPolicyByIDUriPUT, id, xml);
+                        response = await UserMode.HttpPutIDAsync(Constants.TrustFrameworkPolicyByIDUriPUT, policy.Id, policy.Text);
                         if (response.IsSuccessStatusCode == false)
                         {
                             string errContent = await response.Content.ReadAsStringAsync();
@@ -392,7 +321,7 @@ namespace B2CPolicyManager
                         {
                             DateTime thisDayUpdated = DateTime.Now;
 
-                            HTTPResponse.AppendText("\r\n" + thisDayUpdated.ToString() + " - Successfully updated " + file + "\r\n");
+                            HTTPResponse.AppendText("\r\n" + thisDayUpdated.ToString() + " - Successfully updated " + policy.Id + "\r\n");
                         }
                     }
 
@@ -477,7 +406,7 @@ namespace B2CPolicyManager
             {
                 if (appList.SelectedItem != null && tenantTxt.Text != null && tenantTxt.Text != "" && getAccessToken.Checked && b2cResource.Text != "")
                 {
-                    List<App> apps = finalAppList.Where(a => a.displayName == appList.SelectedItem).ToList();
+                    List<App> apps = finalAppList.Where(a => a.displayName == appList.SelectedItem.ToString()).ToList();
                     string appId = apps[0].appId;
                     Regex regex = new Regex(@"\w*");
                     Match match = regex.Match(tenantTxt.Text);
@@ -485,7 +414,7 @@ namespace B2CPolicyManager
                 }
                 else if (appList.SelectedItem != null && tenantTxt.Text != null && tenantTxt.Text != "" && !getAccessToken.Checked)
                 {
-                    List<App> apps = finalAppList.Where(a => a.displayName == appList.SelectedItem).ToList();
+                    List<App> apps = finalAppList.Where(a => a.displayName == appList.SelectedItem.ToString()).ToList();
                     string appId = apps[0].appId;
                     Regex regex = new Regex(@"\w*");
                     Match match = regex.Match(tenantTxt.Text);
@@ -708,7 +637,7 @@ namespace B2CPolicyManager
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            List<App> apps = finalAppList.Where(a => a.displayName == appList.SelectedItem).ToList();
+            List<App> apps = finalAppList.Where(a => a.displayName == appList.SelectedItem.ToString()).ToList();
             string appId = apps[0].appId;
             replyUrl.Items.Clear();
             replyUrl.Text = "";
@@ -745,7 +674,7 @@ namespace B2CPolicyManager
 
         private void replyUrl_SelectedIndexChanged(object sender, EventArgs e)
         {
-            List<App> apps = finalAppList.Where(a => a.displayName == appList.SelectedItem).ToList();
+            List<App> apps = finalAppList.Where(a => a.displayName == appList.SelectedItem.ToString()).ToList();
             string appId = apps[0].appId;
 
             if (apps[0].web.redirectUris != null)

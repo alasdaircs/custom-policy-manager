@@ -94,7 +94,7 @@
             this.listBtn.TabIndex = 8;
             this.listBtn.Text = "List Policies";
             this.listBtn.UseVisualStyleBackColor = true;
-            this.listBtn.Click += new System.EventHandler(this.ListBtn_ClickAsync);
+            this.listBtn.Click += new System.EventHandler(this.ListBtn_Click);
             // 
             // deleteSelectedBtn
             // 
