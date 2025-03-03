@@ -26,14 +26,9 @@ namespace B2CPolicyManager
             InitializeComponent();
         }
 
-        private void Label1_Click(object sender, EventArgs e)
-        {
-
-        }
-
         private void Button1_Click(object sender, EventArgs e)
         {
-        FolderBrowserDialog fbd = new FolderBrowserDialog();
+            FolderBrowserDialog fbd = new FolderBrowserDialog();
             if (policyFolderLbl.Text != null)
             {
                 fbd.SelectedPath = policyFolderLbl.Text;
@@ -43,24 +38,9 @@ namespace B2CPolicyManager
                 Properties.Settings.Default.Folder = fbd.SelectedPath;
                 Properties.Settings.Default.Save();
                 policyFolderLbl.Text = fbd.SelectedPath;
-                checkedPolicyList.Items.Clear();
-                //var ext = new List<string> { ".xml" };
-                //string[] fileEntries = Directory.GetFiles(policyFolderLbl.Text).Select(p => Path.GetFileName(p)..Where(fn => Path.GetExtension(fn) == ".xml")
-
-                var allFilenames = Directory.EnumerateFiles(policyFolderLbl.Text).Select(p => Path.GetFileName(p));
-
-                // Get all filenames that have a .txt extension, excluding the extension
-                var fileEntries = allFilenames.Where(fn => Path.GetExtension(fn) == ".xml")
-                                             .Select(fn => Path.GetFileName(fn))
-                                             .ToArray();
-
-
-                foreach (string file in fileEntries)
-                {
-                    checkedPolicyList.Items.Add(file);
-                }
-            }
-        }
+				RefrshFileListBtn_Click( sender, e );
+			}
+		}
 
         private async void LoginBtn_Click(object sender, EventArgs e)
         {
@@ -347,7 +327,7 @@ namespace B2CPolicyManager
 
         }
 
-        private void checkedListBox1_SelectedIndexChanged(object sender, EventArgs e)
+        private void checkedPolicyList_SelectedIndexChanged(object sender, EventArgs e)
         {
 
         }
@@ -360,9 +340,10 @@ namespace B2CPolicyManager
                 var allFilenames = Directory.EnumerateFiles(policyFolderLbl.Text).Select(p => Path.GetFileName(p));
 
                 // Get all filenames that have a .txt extension, excluding the extension
-                var fileEntries = allFilenames.Where(fn => Path.GetExtension(fn) == ".xml")
-                                             .Select(fn => Path.GetFileName(fn))
-                                             .ToArray();
+                var fileEntries = allFilenames
+                    .Where(fn => Path.GetExtension(fn) == ".xml")
+                    .Select(fn => Path.GetFileName(fn))
+                    .Where(fn => fn.ContainsEx(policyFileFilter.Text));
                 foreach (string file in fileEntries)
                 {
                     checkedPolicyList.Items.Add(file);
@@ -382,7 +363,7 @@ namespace B2CPolicyManager
 
 
 
-        private void textBox1_TextChanged(object sender, EventArgs e)
+        private void tenantTxt_TextChanged(object sender, EventArgs e)
         {
             if (policyList.SelectedItem != null)
             {
@@ -437,21 +418,7 @@ namespace B2CPolicyManager
             this.showRPs.Checked = Properties.Settings.Default.ShowRPs;
             this.getAccessToken.Checked = Properties.Settings.Default.GetAccessToken;
             this.b2cResource.Text = Properties.Settings.Default.Resource;
-
-            if (this.policyFolderLbl.Text != "No Folder selected.")
-            {
-                var allFilenames = Directory.EnumerateFiles(policyFolderLbl.Text).Select(p => Path.GetFileName(p));
-
-                // Get all filenames that have a .txt extension, excluding the extension
-                var fileEntries = allFilenames.Where(fn => Path.GetExtension(fn) == ".xml")
-                                             .Select(fn => Path.GetFileName(fn))
-                                             .ToArray();
-                foreach (string file in fileEntries)
-                {
-                    checkedPolicyList.Items.Add(file);
-                }
-            }
-
+			RefrshFileListBtn_Click( sender, e );
         }
 
         private void v2AppIDGraphtxt_TextChanged(object sender, EventArgs e)
@@ -545,10 +512,6 @@ namespace B2CPolicyManager
 
         }
 
-        private void button7_Click(object sender, EventArgs e)
-        {
-        }
-
         private void showRPs_CheckedChanged(object sender, EventArgs e)
         {
             Properties.Settings.Default.ShowRPs = showRPs.Checked;
@@ -569,7 +532,7 @@ namespace B2CPolicyManager
             Properties.Settings.Default.Save();
         }
 
-        private void textBox1_TextChanged_1(object sender, EventArgs e)
+        private void policyListFilter_TextChanged(object sender, EventArgs e)
         {
             policyList.Items.Clear();
             CultureInfo culture = new CultureInfo("en-GB", false);
@@ -587,7 +550,12 @@ namespace B2CPolicyManager
             }
         }
 
-        private async void button3_Click_1(object sender, EventArgs e)
+		private void policyFileFilter_TextChanged( object sender, EventArgs e )
+		{
+			RefrshFileListBtn_Click( sender, e );
+		}
+
+		private async void button3_Click_1(object sender, EventArgs e)
         {
             List<App> finalApplist = await RefreshAppListAsync();
             foreach (App app in finalApplist)
@@ -667,11 +635,6 @@ namespace B2CPolicyManager
 
         }
 
-        private void label1_Click_1(object sender, EventArgs e)
-        {
-
-        }
-
         private void replyUrl_SelectedIndexChanged(object sender, EventArgs e)
         {
             List<App> apps = finalAppList.Where(a => a.displayName == appList.SelectedItem.ToString()).ToList();
@@ -696,5 +659,7 @@ namespace B2CPolicyManager
             Properties.Settings.Default.ReplyUrl = replyUrl.SelectedItem.ToString();
             Properties.Settings.Default.Save();
         }
-    }
+
+
+	}
 }
