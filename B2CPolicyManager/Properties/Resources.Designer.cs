@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace B2CPolicyManager.Properties {
+namespace B2CPolicyManagerUI.Properties {
     using System;
     
     

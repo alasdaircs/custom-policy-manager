@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace B2CPolicyManager
+namespace B2CPolicyManager.Models
 {
     public class PolicyList
     {

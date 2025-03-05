@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.35122.118
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "B2CPolicyManager", "B2CPolicyManager\B2CPolicyManager.csproj", "{28F978B9-71A6-4455-9807-E2D7DFF3EC4C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "B2CPolicyManagerUI", "B2CPolicyManager\B2CPolicyManagerUI.csproj", "{28F978B9-71A6-4455-9807-E2D7DFF3EC4C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "B2CPolicyManager", "B2CDeployer\B2CPolicyManager.csproj", "{56541367-4358-49E9-AA98-06A0FF777B2F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{28F978B9-71A6-4455-9807-E2D7DFF3EC4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{28F978B9-71A6-4455-9807-E2D7DFF3EC4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{28F978B9-71A6-4455-9807-E2D7DFF3EC4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56541367-4358-49E9-AA98-06A0FF777B2F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56541367-4358-49E9-AA98-06A0FF777B2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56541367-4358-49E9-AA98-06A0FF777B2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56541367-4358-49E9-AA98-06A0FF777B2F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

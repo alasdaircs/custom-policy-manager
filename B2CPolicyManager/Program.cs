@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace B2CPolicyManager
+namespace B2CPolicyManagerUI
 {
     static class Program
     {
