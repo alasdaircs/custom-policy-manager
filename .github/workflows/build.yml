@@ -16,7 +16,7 @@ jobs:
       matrix:
         project:
           - b2cpolicymanager-cli/b2cpolicymanager-cli.csproj
-          - B2CPolicyManagerUI/B2CPolicyManagerUI.csproj
+          - B2CPolicyManager-UI/B2CPolicyManager-UI.csproj
 
     steps:
     - name: Checkout repository

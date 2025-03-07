@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\B2CDeployer\B2CPolicyManager.csproj" />
+    <ProjectReference Include="..\B2CPolicyManager\B2CPolicyManager.csproj" />
   </ItemGroup>
 
 </Project>
