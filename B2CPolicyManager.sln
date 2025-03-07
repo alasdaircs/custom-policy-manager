@@ -7,6 +7,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "B2CPolicyManagerUI", "B2CPo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "B2CPolicyManager", "B2CDeployer\B2CPolicyManager.csproj", "{56541367-4358-49E9-AA98-06A0FF777B2F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "b2cpolicymanager-cli", "b2cpolicymanager-cli\b2cpolicymanager-cli.csproj", "{B393CFBC-BEDB-4DE2-9966-4F175A2FC8E1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		README.md = README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +30,10 @@ Global
 		{56541367-4358-49E9-AA98-06A0FF777B2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{56541367-4358-49E9-AA98-06A0FF777B2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{56541367-4358-49E9-AA98-06A0FF777B2F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B393CFBC-BEDB-4DE2-9966-4F175A2FC8E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B393CFBC-BEDB-4DE2-9966-4F175A2FC8E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B393CFBC-BEDB-4DE2-9966-4F175A2FC8E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B393CFBC-BEDB-4DE2-9966-4F175A2FC8E1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

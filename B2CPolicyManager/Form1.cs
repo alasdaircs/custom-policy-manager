@@ -31,7 +31,7 @@ namespace B2CPolicyManagerUI
 
 		ILogger Logger { get; }
 
-		AuthenticationHelper AuthenticationHelper 
+		PublicAuthenticationHelper AuthenticationHelper 
 			=> new( tenantTxt.Text, new Guid( txtAppId.Text ) );
 
 		PolicyManager PolicyManager
@@ -142,7 +142,7 @@ namespace B2CPolicyManagerUI
 		{
 			if( btnLogin.Text == "Login" )
 			{
-				string token = await AuthenticationHelper.GetTokenForUserAsync();
+				string token = await AuthenticationHelper.GetTokenAsync();
 				if( token != null )
 				{
 					btnLogin.Text = "Logout";
@@ -161,7 +161,7 @@ namespace B2CPolicyManagerUI
 
 		private async void btnListPolicies_Click( object sender, EventArgs e )
 		{
-			string token = await AuthenticationHelper.GetTokenForUserAsync();
+			string token = await AuthenticationHelper.GetTokenAsync();
 			if( token != null )
 			{
 				await UpdatePolicyListAsync( true );
@@ -173,7 +173,7 @@ namespace B2CPolicyManagerUI
 
 			if( lstPolicies.SelectedItem != null )
 			{
-				string token = await AuthenticationHelper.GetTokenForUserAsync();
+				string token = await AuthenticationHelper.GetTokenAsync();
 				if( token != null )
 				{
 					await PolicyManager.DeletePolicyAsync( Logger, lstPolicies.SelectedItem.ToString() );
@@ -191,7 +191,7 @@ namespace B2CPolicyManagerUI
 					.Cast<String>()
 					.Select( policy => Path.Join( policyFolderLbl.Text, policy ) )
 					.ToList();
-				await PolicyManager.Deploy( Logger, selectedPolicies );
+				await PolicyManager.DeployPoliciesAsync( Logger, selectedPolicies );
 				await UpdatePolicyListAsync( true );
 			}
 
@@ -358,19 +358,18 @@ namespace B2CPolicyManagerUI
 
 		private void btnSamlSP_Click( object sender, EventArgs e )
 		{
-			Regex regex = new Regex(@"\w*");
+			var regex = new Regex(@"\w*");
 			Match match = regex.Match(tenantTxt.Text);
 			if( lstPolicies.SelectedItem != null )
 			{
 				string url = "https://b2csamlrp.azurewebsites.net/SP/autoinitiate?" + "tenant=" + match.Value + "&policy=" + lstPolicies.SelectedItem.ToString();
 				string command = String.Format("start chrome --incognito --new-window \"{0}\"", url);
-				ProcessStartInfo startInfo = new ProcessStartInfo("cmd", "/c " + command)
+				var startInfo = new ProcessStartInfo("cmd", "/c " + command)
 				{
 					WindowStyle = ProcessWindowStyle.Hidden
 				};
 				Process.Start( startInfo );
 			}
-
 		}
 
 		private async void showRPs_CheckedChanged( object sender, EventArgs e )
@@ -431,7 +430,6 @@ namespace B2CPolicyManagerUI
 			Properties.Settings.Default.ReplyUrl = txtReplyUrl.SelectedItem.ToString();
 			Properties.Settings.Default.Save();
 		}
-
 
 	}
 }

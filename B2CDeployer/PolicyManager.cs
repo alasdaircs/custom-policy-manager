@@ -3,8 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Sockets;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+
+using Azure;
 
 using B2CPolicyManager.Models;
 
@@ -16,26 +21,26 @@ namespace B2CPolicyManager
 {
 	public class PolicyManager
 	{
-		public AuthenticationHelper AuthenticationHelper { get; }
+		public AuthenticationHelperBase AuthenticationHelper { get; }
 
-		public PolicyManager( AuthenticationHelper AuthenticationHelper )
+		public PolicyManager( AuthenticationHelperBase AuthenticationHelper )
 		{
 			this.AuthenticationHelper = AuthenticationHelper;
 		}
 
-		HttpHelper HttpHelper 
-			=> new HttpHelper( AuthenticationHelper );
+		HttpHelper HttpHelper
+			=> new( AuthenticationHelper );
 
-		public async Task Deploy( ILogger Logger, IEnumerable<String> PolicyFileNames )
+		public async Task DeployPoliciesAsync( ILogger Logger, IEnumerable<String> PolicyFileNames, CancellationToken cancellation = default )
 		{
 			HttpResponseMessage response;
 
 			Logger.LogInformation( "Deploying B2C resources..." );
 
-			string token = await AuthenticationHelper.GetTokenForUserAsync();
+			string token = await AuthenticationHelper.GetTokenAsync( cancellation: cancellation);
 			if( token != null )
 			{
-
+				// Sort the policies by dependency so we write them in the correct order
 				var unorderedPolicies = new List<Policy>();
 				var orderedPolicies = new List<Policy>();
 
@@ -43,16 +48,8 @@ namespace B2CPolicyManager
 				{
 					string xml = File.ReadAllText(fileName);
 
-					// Get policy id and base policy id
-					XDocument policyFile = XDocument.Parse( xml );
-					var qualify = ( String name ) => $"{{{policyFile.Root.GetDefaultNamespace()}}}{name}";
 					unorderedPolicies.Add(
-						new Policy
-						{
-							Text = xml,
-							Id = policyFile.Root.Attribute( "PolicyId" ).Value,
-							Base = policyFile.Root.Element( qualify( "BasePolicy" ) )?.Element( qualify( "PolicyId" ) )?.Value
-						}
+						new Policy( xml )
 					);
 				}
 
@@ -65,36 +62,34 @@ namespace B2CPolicyManager
 					}
 				}
 
+				// do the upload
 				foreach( var policy in orderedPolicies )
 				{
-					response = await HttpHelper.HttpPutIDAsync( Constants.TrustFrameworkPolicyByIDUriPUT, policy.Id, policy.Text );
-					if( response.IsSuccessStatusCode == false )
-					{
-						string errContent = await response.Content.ReadAsStringAsync();
-						uploadPolicyResponseError errorMsg = JsonConvert.DeserializeObject<uploadPolicyResponseError>(errContent);
-						Logger.LogError( "{0}; CorrelationId: {1}", errorMsg.error.message, errorMsg.error.innerError.correlationId );
-					}
-					else
+					response = await HttpHelper.HttpPutIDAsync( Constants.TrustFrameworkPolicyByIDUriPUT, policy.Id, policy.Text, cancellation );
+					if( response.IsSuccessStatusCode )
 					{
 						Logger.LogInformation( "Successfully updated policy {0}", policy.Id );
 					}
+					else
+					{
+						string content = await response.Content.ReadAsStringAsync();
+						uploadPolicyResponseError errorMsg = JsonConvert.DeserializeObject<uploadPolicyResponseError>(content);
+						Logger.LogError( "{0}; CorrelationId: {1}", errorMsg.error.message, errorMsg.error.innerError.correlationId );
+					}
 				}
-
 			}
 
 			Logger.LogInformation( "B2C resources deployed." );
-
 		}
 
-		public async Task<List<String>> GetPoliciesAsync( ILogger Logger )
+		public async Task<List<String>> GetPoliciesAsync( ILogger Logger, CancellationToken cancellation = default )
 		{
 			List<String> result;
-			HttpResponseMessage response;
 
-			response = await HttpHelper.HttpGetAsync( Constants.TrustFrameworkPolicesUri );
+			var response = await HttpHelper.HttpGetAsync( Constants.TrustFrameworkPoliciesUri, cancellation );
 			string content = await response.Content.ReadAsStringAsync();
 
-			if( response.IsSuccessStatusCode == true )
+			if( response.IsSuccessStatusCode )
 			{
 				result = JsonConvert.DeserializeObject<PolicyList>( content )
 					.Value
@@ -113,48 +108,75 @@ namespace B2CPolicyManager
 			return result;
 		}
 
-		public async Task<List<App>> GetAppRegistrationsAsync( ILogger Logger )
+		public async IAsyncEnumerable<Policy> GetPolicyDefinitionsAsync( 
+			ILogger Logger, 
+			IEnumerable<String> PolicyNames, 
+			[EnumeratorCancellation]
+			CancellationToken cancellation = default )
+		{
+			foreach( var policyName in PolicyNames )
+			{
+				if( cancellation.IsCancellationRequested )
+				{
+					yield break;
+				}
+
+				var response = await HttpHelper.HttpGetIDAsync( Constants.TrustFrameworkPolicyByIDUriPUT, policyName, cancellation );
+				string content = await response.Content.ReadAsStringAsync();
+
+				if( response.IsSuccessStatusCode )
+				{
+					Logger.LogDebug( "Successfully got policy definition {Policy}", policyName );
+					yield return  new Policy( content );
+				}
+				else
+				{
+					Logger.LogError( "Failed to get policy definition {Policy}", policyName );
+				}
+			}
+		}
+
+		public async Task<List<App>> GetAppRegistrationsAsync( ILogger Logger, CancellationToken cancellation = default )
 		{
 			List<App> result;
 			HttpResponseMessage response;
 			Logger.LogInformation( "Getting AAD B2C app registrations." );
 
-			response = await HttpHelper.HttpGetAsync( "https://graph.microsoft.com/beta/applications" );
+			response = await HttpHelper.HttpGetAsync( "https://graph.microsoft.com/beta/applications", cancellation );
 			string content = await response.Content.ReadAsStringAsync();
 
-			if( response.IsSuccessStatusCode == true )
+			if( response.IsSuccessStatusCode )
 			{
 				result = JsonConvert.DeserializeObject<AppList>( content ).value
 					.Where( app => app.signInAudience == "AzureADandPersonalMicrosoftAccount" )
 					.OrderBy( app => app.displayName )
 					.ToList()
 				;
-
 			}
 			else
 			{
-				result = new();
+				result = [];
 				Logger.LogError( "Failed to fetch app registrations." );
 			}
 
 			return result;
 		}
 
-		public async Task DeletePolicyAsync( ILogger Logger, String PolicyName )
+		public async Task DeletePolicyAsync( ILogger Logger, String PolicyName, CancellationToken cancellation = default )
 		{
 			HttpResponseMessage response;
-			
-			Logger.LogInformation( "Deleting policy {0}", PolicyName );
-			response = await HttpHelper.HttpDeleteIDAsync( Constants.TrustFrameworkPolicesUri, Constants.TrustFrameworkPolicyByIDUri, PolicyName.ToUpper() );
-			string content = await response.Content.ReadAsStringAsync();
 
-			if( response.IsSuccessStatusCode == true )
+			Logger.LogInformation( "Deleting policy {0}", PolicyName );
+			response = await HttpHelper.HttpDeleteIDAsync( Constants.TrustFrameworkPolicyByIDUri, PolicyName.ToUpper(), cancellation );
+
+			if( response.IsSuccessStatusCode )
 			{
-				Logger.LogInformation( "Successfully deleted policy {0}", PolicyName );
+				Logger.LogInformation( "Successfully deleted policy {Policy}", PolicyName );
 			}
 			else
 			{
-				Logger.LogInformation( "Failed to delete policy {0}: {1}", PolicyName, content );
+				string content = await response.Content.ReadAsStringAsync();
+				Logger.LogInformation( "Failed to delete policy {Policy}: {Error}", PolicyName, content );
 			}
 		}
 
