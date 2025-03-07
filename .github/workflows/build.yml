@@ -16,8 +16,8 @@ jobs:
       max-parallel: 1
       matrix:
         project:
-          - b2cpolicymanager-cli/b2cpolicymanager-cli.csproj
-          - B2CPolicyManager-UI/B2CPolicyManager-UI.csproj
+          - b2cpolicymanager-cli
+          - B2CPolicyManager-UI
 
     steps:
     - name: Checkout repository
@@ -29,13 +29,13 @@ jobs:
         dotnet-version: '9.0.x'
 
     - name: Restore dependencies
-      run: dotnet restore ${{ matrix.project }}
+      run: dotnet restore ${{ matrix.project }}/${{ matrix.project }}.csproj
 
     - name: Build
-      run: dotnet build ${{ matrix.project }} --configuration Release --no-restore
+      run: dotnet build ${{ matrix.project }}/${{ matrix.project }}.csproj --configuration Release --no-restore
 
     - name: Publish
-      run: dotnet publish ${{ matrix.project }} --configuration Release --no-restore --output ./output/${{ matrix.project }}
+      run: dotnet publish ${{ matrix.project }}/${{ matrix.project }}.csproj --configuration Release --no-restore --output ./output/${{ matrix.project }}
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
