@@ -7,23 +7,26 @@ using Microsoft.Extensions.Logging;
 
 namespace b2cpolicymanager_cli
 {
-    internal class OptionsBase
+    internal abstract class Options
     {
+		[Option( 'v', "verbose", Default = false, Required = false, HelpText = "You know, more messages, more clutter, the usual." )]
+		public Boolean Verbose{ get; set; }
+
 		[Option( 't', "tenant", Required = true, HelpText = "The tenant id - either domain name or guid of the tenant" )]
 		public String TenantId { get; set; } = "";
 
 		[Option( 'a', "appid", Required = true, HelpText = "The application id - GUID of App Registration in Entra ID" )]
 		public Guid AppId { get; set; }
 
-		[Option( 's', "appsecret", Required = true, HelpText = "The application secret from the App Registration in Entra ID - DO NOT STORE THIS" )]
+		[Option( 's', "appsecret", Required = true,  HelpText = "The application secret from the App Registration in Entra ID - DO NOT STORE THIS" )]
 		public String AppSecret { get; set; } = "";
 
 		[Verb( "list", HelpText = "List the policies in the tenant" )]
-		public class ListOptions :OptionsBase
+		public class ListOptions :Options
 		{
 		}
 
-		public class FolderOptions :OptionsBase
+		public abstract class FolderOptions :Options
 		{
 			[Option( 'f', "folder", Default = "", Required = false, HelpText = "The path to the folder for the policy files. Relative or absolute." )]
 			public String Folder { get; set; } = "";

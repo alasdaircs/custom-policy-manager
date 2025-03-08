@@ -1,29 +1,67 @@
-﻿using B2CPolicyManager;
+﻿using System.Text.Json;
+
+using B2CPolicyManager;
 
 using b2cpolicymanager_cli;
 
 using CommandLine;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 
-using static b2cpolicymanager_cli.OptionsBase;
+using static b2cpolicymanager_cli.Options;
 
-using ILoggerFactory loggerFactory = LoggerFactory.Create(
-	builder => builder.AddConsole()
-);
-ILogger logger = loggerFactory.CreateLogger<Program>();
+Options? options = null;
 
-OptionsBase? options = null;
-var parserResult = Parser.Default.ParseArguments<ListOptions, GetOptions, DeployOptions>( args )
-	.WithParsed<OptionsBase>(
+// Resolve command line options that are environment references (starting with "env:")
+var expandedArgs
+	= args.Select(
+		arg =>
+			arg.StartsWith( "env:", StringComparison.CurrentCultureIgnoreCase )
+				? Environment.GetEnvironmentVariable( arg[  4 ..] ) ?? ""
+				: arg
+	);
+
+var parserResult = Parser.Default.ParseArguments<ListOptions, GetOptions, DeployOptions>( expandedArgs )
+	.WithParsed<Options>(
 		opts => options = opts
 	);
 
+using ILoggerFactory loggerFactory
+	= LoggerFactory.Create(
+		builder => builder
+			.AddConsole(
+				opts =>
+				{
+					opts.FormatterName = "CustomFormatter";
+				}
+			)
+			.AddConsoleFormatter<CustomFormatter, CustomFormatterOptions>()
+			.SetMinimumLevel(
+				options?.Verbose ?? true
+					? LogLevel.Trace
+					: LogLevel.Information
+			)
+	);
+
+ILogger logger = loggerFactory.CreateLogger<Program>();
+
 if( options == null )
 {
-	logger.LogError( "Invalid command line options" );
+	logger.LogCritical( "Invalid command line options" );
 	Environment.Exit( 1 );
 }
+
+logger.LogDebug(
+	"Options: {options}",
+	JsonSerializer.Serialize( 
+		options, 
+		new JsonSerializerOptions
+		{
+			WriteIndented = true 
+		} 
+	) 
+);
 
 var authHelper = new ConfidentialAuthenticationHelper(
 	options.TenantId,
@@ -31,11 +69,7 @@ var authHelper = new ConfidentialAuthenticationHelper(
 	options.AppSecret
 );
 
-var token = await authHelper.GetTokenAsync();
-
-// logger.LogInformation( "Token: {token}", token );
-
-var policyManager = new PolicyManager( authHelper );
+ var policyManager = new PolicyManager( authHelper );
 
 await parserResult
 	.MapResult(
