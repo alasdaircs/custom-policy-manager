@@ -36,7 +36,12 @@ using ILoggerFactory loggerFactory
 					opts.FormatterName = "CustomFormatter";
 				}
 			)
-			.AddConsoleFormatter<CustomFormatter, CustomFormatterOptions>()
+			.AddConsoleFormatter<CustomFormatter, CustomFormatterOptions>(
+				opts =>
+				{
+					opts.TimestampFormat = "HH:mm:ss.fff";
+				}
+			)
 			.SetMinimumLevel(
 				options?.Verbose ?? true
 					? LogLevel.Trace
