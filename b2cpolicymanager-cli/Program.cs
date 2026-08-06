@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.IO.Enumeration;
+using System.Text.Json;
 
 using B2CPolicyManager;
 
@@ -87,9 +88,27 @@ await parserResult
 		},
 		async ( GetOptions opts ) =>
 		{
-			var policies = opts.PolicyNames.Any() 
+			var policies = opts.PolicyNames.Any()
 				? opts.PolicyNames
 				: await policyManager.GetPoliciesAsync( logger );
+
+			// Names containing wildcards are matched against the tenant's policy list
+			if( policies.Any( name => name.Contains( '*' ) || name.Contains( '?' ) ) )
+			{
+				var allPolicies = await policyManager.GetPoliciesAsync( logger );
+
+				policies = policies
+					.SelectMany(
+						pattern => allPolicies.Where( policy => FileSystemName.MatchesSimpleExpression( pattern, policy ) )
+					)
+					.Distinct( StringComparer.OrdinalIgnoreCase )
+					.ToList();
+
+				if( !policies.Any() )
+				{
+					logger.LogWarning( "No policies matched the requested pattern(s)" );
+				}
+			}
 
 			await foreach( var policy in policyManager.GetPolicyDefinitionsAsync( logger, policies ) )
 			{

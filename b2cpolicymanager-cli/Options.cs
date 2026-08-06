@@ -35,7 +35,7 @@ namespace b2cpolicymanager_cli
 		[Verb( "get", HelpText = "Get the policies from the tenant" )]
 		public class GetOptions :FolderOptions
 		{
-			[Option( 'p', "policies", Required = false, HelpText = "The list of policy names to get - omit to get all" )]
+			[Option( 'p', "policies", Required = false, HelpText = "The list of policy names to get. Wildcards (* and ?) are allowed. Omit to get all." )]
 			public IEnumerable<String> PolicyNames { get; set; } = [];
 		}
 

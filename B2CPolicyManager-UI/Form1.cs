@@ -168,6 +168,60 @@ namespace B2CPolicyManagerUI
 			}
 		}
 
+		private async void btnFetchPolicies_Click( object sender, EventArgs e )
+		{
+			if( policyFolderLbl.Text == "No Folder selected." || String.IsNullOrEmpty( policyFolderLbl.Text ) )
+			{
+				MessageBox.Show( "Select a policy folder first.", "Fetch Policies", MessageBoxButtons.OK, MessageBoxIcon.Warning );
+				return;
+			}
+
+			var policies = lstPolicies.Items
+				.Cast<String>()
+				.ToList();
+
+			if( policies.Count == 0 )
+			{
+				Logger.LogWarning( "There are no policies to fetch. Use List Policies first." );
+				return;
+			}
+
+			var existing = policies
+				.Where(
+					policy => File.Exists( Path.Join( policyFolderLbl.Text, Path.ChangeExtension( policy, ".xml" ) ) )
+				)
+				.ToList();
+
+			if( existing.Count != 0 )
+			{
+				var result = MessageBox.Show(
+					$"The following {existing.Count} file(s) in {policyFolderLbl.Text} will be overwritten:\n\n{String.Join( "\n", existing.Select( policy => Path.ChangeExtension( policy, ".xml" ) ) )}\n\nContinue?",
+					"Overwrite policy files?",
+					MessageBoxButtons.YesNo,
+					MessageBoxIcon.Warning
+				);
+
+				if( result != DialogResult.Yes )
+				{
+					return;
+				}
+			}
+
+			string token = await AuthenticationHelper.GetTokenAsync();
+			if( token != null )
+			{
+				await foreach( var policy in PolicyManager.GetPolicyDefinitionsAsync( Logger, policies ) )
+				{
+					var path = Path.Join( policyFolderLbl.Text, Path.ChangeExtension( policy.Id, ".xml" ) );
+
+					await File.WriteAllTextAsync( path, policy.Text );
+					Logger.LogInformation( "Saved policy {Policy} to {Path}", policy.Id, path );
+				}
+
+				btnRefrshFileList_Click( sender, e );
+			}
+		}
+
 		private async void btnDeleteSelected_Click( object sender, EventArgs e )
 		{
 

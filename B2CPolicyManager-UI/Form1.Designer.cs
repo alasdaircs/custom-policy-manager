@@ -32,6 +32,7 @@
 			btnSelectPolicyFolder = new System.Windows.Forms.Button();
 			policyFolderLbl = new System.Windows.Forms.Label();
 			btnListPolicies = new System.Windows.Forms.Button();
+			btnFetchPolicies = new System.Windows.Forms.Button();
 			btnDeleteSelected = new System.Windows.Forms.Button();
 			lstPolicies = new System.Windows.Forms.ListBox();
 			btnLogin = new System.Windows.Forms.Button();
@@ -98,9 +99,20 @@
 			btnListPolicies.Text = "List Policies";
 			btnListPolicies.UseVisualStyleBackColor = true;
 			btnListPolicies.Click +=  btnListPolicies_Click ;
-			// 
+			//
+			// btnFetchPolicies
+			//
+			btnFetchPolicies.Location = new System.Drawing.Point( 818, 387 );
+			btnFetchPolicies.Margin = new System.Windows.Forms.Padding( 6, 8, 6, 8 );
+			btnFetchPolicies.Name = "btnFetchPolicies";
+			btnFetchPolicies.Size = new System.Drawing.Size( 211, 56 );
+			btnFetchPolicies.TabIndex = 43;
+			btnFetchPolicies.Text = "Fetch Policies";
+			btnFetchPolicies.UseVisualStyleBackColor = true;
+			btnFetchPolicies.Click +=  btnFetchPolicies_Click ;
+			//
 			// btnDeleteSelected
-			// 
+			//
 			btnDeleteSelected.Location = new System.Drawing.Point( 823, 977 );
 			btnDeleteSelected.Margin = new System.Windows.Forms.Padding( 6, 8, 6, 8 );
 			btnDeleteSelected.Name = "btnDeleteSelected";
@@ -477,6 +489,7 @@
 			Controls.Add( lstPolicies );
 			Controls.Add( btnDeleteSelected );
 			Controls.Add( btnListPolicies );
+			Controls.Add( btnFetchPolicies );
 			Controls.Add( policyFolderLbl );
 			Controls.Add( btnSelectPolicyFolder );
 			Icon = (System.Drawing.Icon)resources.GetObject( "$this.Icon" );
@@ -499,6 +512,7 @@
 		private System.Windows.Forms.Button btnSelectPolicyFolder;
         private System.Windows.Forms.Label policyFolderLbl;
         private System.Windows.Forms.Button btnListPolicies;
+        private System.Windows.Forms.Button btnFetchPolicies;
         private System.Windows.Forms.Button btnDeleteSelected;
         private System.Windows.Forms.ListBox lstPolicies;
         private System.Windows.Forms.Button btnLogin;
