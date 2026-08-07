@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +14,8 @@ using Microsoft.Identity.Client;
 
 namespace B2CPolicyManager
 {
+	// Windows-only via TokenCacheHelper's DPAPI token cache
+	[SupportedOSPlatform( "windows" )]
 	public class PublicAuthenticationHelper
 		: AuthenticationHelperBase
 	{

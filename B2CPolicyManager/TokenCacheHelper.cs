@@ -4,12 +4,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace B2CPolicyManager
 {
+	// DPAPI (ProtectedData) has no cross-platform implementation
+	[SupportedOSPlatform( "windows" )]
 	static class TokenCacheHelper
 	{
 		/// <summary>
