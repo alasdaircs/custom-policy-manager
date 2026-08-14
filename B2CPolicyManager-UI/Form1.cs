@@ -29,7 +29,7 @@ namespace B2CPolicyManagerUI
 		List<String> _policyList = new();
 		List<App> _appRegistrationList = new();
 
-		ILogger Logger { get; }
+		TextBoxLogger Logger { get; }
 
 		PublicAuthenticationHelper AuthenticationHelper 
 			=> new( tenantTxt.Text, new Guid( txtAppId.Text ) );
@@ -41,6 +41,51 @@ namespace B2CPolicyManagerUI
 		{
 			InitializeComponent();
 			Logger = new TextBoxLogger( HTTPResponse );
+		}
+
+		Boolean _busy;
+
+		Boolean HasPolicyFolder
+			=> policyFolderLbl.Text != "No Folder selected."
+				&& !String.IsNullOrEmpty( policyFolderLbl.Text );
+
+		/// <summary>
+		/// The single place that projects application state onto the controls, React-style.
+		/// Call whenever the state it reads changes: busy flag, policy list, selection, folder.
+		/// </summary>
+		void UpdateUiState()
+		{
+			UseWaitCursor = _busy;
+
+			btnLogin.Enabled = !_busy;
+			btnListPolicies.Enabled = !_busy;
+			btnFetchPolicies.Enabled = !_busy && HasPolicyFolder && lstPolicies.Items.Count != 0;
+			btnDeleteSelected.Enabled = !_busy && lstPolicies.SelectedItem != null;
+			btnUpdateSelectedPolices.Enabled = !_busy && HasPolicyFolder;
+		}
+
+		/// <summary>
+		/// Runs at most one long-running process at a time; the buttons that could start
+		/// another are disabled (and the wait cursor shown) for the duration.
+		/// </summary>
+		async Task RunProcessAsync( Func<Task> process )
+		{
+			if( _busy )
+			{
+				return;
+			}
+
+			_busy = true;
+			UpdateUiState();
+			try
+			{
+				await process();
+			}
+			finally
+			{
+				_busy = false;
+				UpdateUiState();
+			}
 		}
 
 		private App SelectedAppRegistration
@@ -74,11 +119,11 @@ namespace B2CPolicyManagerUI
 							!showRPs.Checked
 							||
 							(
-								!policyId.Contains( "BASE" )
+								!policyId.Contains( "BASE", StringComparison.OrdinalIgnoreCase )
 								&&
-								!policyId.Contains( "EXTENSIONS" )
+								!policyId.Contains( "EXTENSIONS", StringComparison.OrdinalIgnoreCase )
 								&&
-								!policyId.Contains( "LOCALIZATON" )
+								!policyId.Contains( "LOCALIZATION", StringComparison.OrdinalIgnoreCase )
 							)
 					)
 					.Select(
@@ -100,6 +145,7 @@ namespace B2CPolicyManagerUI
 				}
 			}
 
+			UpdateUiState();
 		}
 
 		private async Task UpdateAppRegistrationsAsync( Boolean refresh )
@@ -135,121 +181,139 @@ namespace B2CPolicyManagerUI
 				Properties.Settings.Default.Save();
 				policyFolderLbl.Text = fbd.SelectedPath;
 				btnRefrshFileList_Click( sender, e );
+				UpdateUiState();
 			}
 		}
 
 		private async void btnLogin_Click( object sender, EventArgs e )
-		{
-			if( btnLogin.Text == "Login" )
-			{
-				string token = await AuthenticationHelper.GetTokenAsync();
-				if( token != null )
+			=> await RunProcessAsync(
+				async () =>
 				{
-					btnLogin.Text = "Logout";
-					Logger.LogInformation( "Logged in, getting policies and app registrations." );
-					await UpdatePolicyListAsync( true );
-					await UpdateAppRegistrationsAsync( true );
+					if( btnLogin.Text == "Login" )
+					{
+						string token = await AuthenticationHelper.GetTokenAsync();
+						if( token != null )
+						{
+							btnLogin.Text = "Logout";
+							Logger.LogInformation( "Logged in, getting policies and app registrations." );
+							await UpdatePolicyListAsync( true );
+							await UpdateAppRegistrationsAsync( true );
+						}
+					}
+					else
+					{
+						btnLogin.Text = "Login";
+						await AuthenticationHelper.ClearCacheAsync();
+						lstPolicies.Items.Clear();
+					}
 				}
-			}
-			else
-			{
-				btnLogin.Text = "Login";
-				await AuthenticationHelper.ClearCacheAsync();
-				lstPolicies.Items.Clear();
-			}
-		}
+			);
 
 		private async void btnListPolicies_Click( object sender, EventArgs e )
-		{
-			string token = await AuthenticationHelper.GetTokenAsync();
-			if( token != null )
-			{
-				await UpdatePolicyListAsync( true );
-			}
-		}
+			=> await RunProcessAsync(
+				async () =>
+				{
+					string token = await AuthenticationHelper.GetTokenAsync();
+					if( token != null )
+					{
+						await UpdatePolicyListAsync( true );
+					}
+				}
+			);
 
 		private async void btnFetchPolicies_Click( object sender, EventArgs e )
-		{
-			if( policyFolderLbl.Text == "No Folder selected." || String.IsNullOrEmpty( policyFolderLbl.Text ) )
-			{
-				MessageBox.Show( "Select a policy folder first.", "Fetch Policies", MessageBoxButtons.OK, MessageBoxIcon.Warning );
-				return;
-			}
-
-			var policies = lstPolicies.Items
-				.Cast<String>()
-				.ToList();
-
-			if( policies.Count == 0 )
-			{
-				Logger.LogWarning( "There are no policies to fetch. Use List Policies first." );
-				return;
-			}
-
-			var existing = policies
-				.Where(
-					policy => File.Exists( Path.Join( policyFolderLbl.Text, Path.ChangeExtension( policy, ".xml" ) ) )
-				)
-				.ToList();
-
-			if( existing.Count != 0 )
-			{
-				var result = MessageBox.Show(
-					$"The following {existing.Count} file(s) in {policyFolderLbl.Text} will be overwritten:\n\n{String.Join( "\n", existing.Select( policy => Path.ChangeExtension( policy, ".xml" ) ) )}\n\nContinue?",
-					"Overwrite policy files?",
-					MessageBoxButtons.YesNo,
-					MessageBoxIcon.Warning
-				);
-
-				if( result != DialogResult.Yes )
+			=> await RunProcessAsync(
+				async () =>
 				{
-					return;
+					if( !HasPolicyFolder )
+					{
+						MessageBox.Show( "Select a policy folder first.", "Fetch Policies", MessageBoxButtons.OK, MessageBoxIcon.Warning );
+						return;
+					}
+
+					var policies = lstPolicies.Items
+						.Cast<String>()
+						.ToList();
+
+					if( policies.Count == 0 )
+					{
+						Logger.LogWarning( "There are no policies to fetch. Use List Policies first." );
+						return;
+					}
+
+					var existing = policies
+						.Where(
+							policy => File.Exists( Path.Join( policyFolderLbl.Text, Path.ChangeExtension( policy, ".xml" ) ) )
+						)
+						.ToList();
+
+					if( existing.Count != 0 )
+					{
+						var result = MessageBox.Show(
+							$"The following {existing.Count} file(s) in {policyFolderLbl.Text} will be overwritten:\n\n{String.Join( "\n", existing.Select( policy => Path.ChangeExtension( policy, ".xml" ) ) )}\n\nContinue?",
+							"Overwrite policy files?",
+							MessageBoxButtons.YesNo,
+							MessageBoxIcon.Warning
+						);
+
+						if( result != DialogResult.Yes )
+						{
+							return;
+						}
+					}
+
+					string token = await AuthenticationHelper.GetTokenAsync();
+					if( token != null )
+					{
+						var fetched = 0;
+
+						await foreach( var policy in PolicyManager.GetPolicyDefinitionsAsync( Logger, policies ) )
+						{
+							var path = Path.Join( policyFolderLbl.Text, Path.ChangeExtension( policy.Id, ".xml" ) );
+
+							await File.WriteAllTextAsync( path, policy.Text );
+							Logger.LogDebug( "Saved policy {Policy} to {Path}", policy.Id, path );
+							fetched++;
+						}
+
+						Logger.LogInformation( "Fetched {Count} of {Total} policies to {Folder}", fetched, policies.Count, policyFolderLbl.Text );
+
+						btnRefrshFileList_Click( sender, e );
+					}
 				}
-			}
-
-			string token = await AuthenticationHelper.GetTokenAsync();
-			if( token != null )
-			{
-				await foreach( var policy in PolicyManager.GetPolicyDefinitionsAsync( Logger, policies ) )
-				{
-					var path = Path.Join( policyFolderLbl.Text, Path.ChangeExtension( policy.Id, ".xml" ) );
-
-					await File.WriteAllTextAsync( path, policy.Text );
-					Logger.LogInformation( "Saved policy {Policy} to {Path}", policy.Id, path );
-				}
-
-				btnRefrshFileList_Click( sender, e );
-			}
-		}
+			);
 
 		private async void btnDeleteSelected_Click( object sender, EventArgs e )
-		{
-
-			if( lstPolicies.SelectedItem != null )
-			{
-				string token = await AuthenticationHelper.GetTokenAsync();
-				if( token != null )
+			=> await RunProcessAsync(
+				async () =>
 				{
-					await PolicyManager.DeletePolicyAsync( Logger, lstPolicies.SelectedItem.ToString() );
-					await UpdatePolicyListAsync( true );
+					if( lstPolicies.SelectedItem != null )
+					{
+						string token = await AuthenticationHelper.GetTokenAsync();
+						if( token != null )
+						{
+							await PolicyManager.DeletePolicyAsync( Logger, lstPolicies.SelectedItem.ToString() );
+							await UpdatePolicyListAsync( true );
+						}
+					}
 				}
-			}
-		}
+			);
 
 		private async void btnUpdateSelectedPolices_Click( object sender, EventArgs e )
-		{
-
-			if( policyFolderLbl.Text != "No Folder selected." )
-			{
-				var selectedPolicies = lstPolicyFiles.CheckedItems
-					.Cast<String>()
-					.Select( policy => Path.Join( policyFolderLbl.Text, policy ) )
-					.ToList();
-				await PolicyManager.DeployPoliciesAsync( Logger, selectedPolicies );
-				await UpdatePolicyListAsync( true );
-			}
-
-		}
+			=> await RunProcessAsync(
+				async () =>
+				{
+					if( HasPolicyFolder )
+					{
+						var selectedPolicies = lstPolicyFiles.CheckedItems
+							.Cast<String>()
+							.Select( policy => Path.Join( policyFolderLbl.Text, policy ) )
+							.ToList();
+						await PolicyManager.DeployPoliciesAsync( Logger, selectedPolicies );
+						await UpdatePolicyListAsync( true );
+					}
+				}
+			);
 
 		private void btnRefrshFileList_Click( object sender, EventArgs e )
 		{
@@ -292,6 +356,7 @@ namespace B2CPolicyManagerUI
 		private void lstPolicies_SelectedIndexChanged( object sender, EventArgs e )
 		{
 			UpdateRunNow();
+			UpdateUiState();
 		}
 
 		private void UpdateRunNow()
@@ -346,6 +411,7 @@ namespace B2CPolicyManagerUI
 			this.b2cResource.Text = Properties.Settings.Default.Resource;
 
 			btnRefrshFileList_Click( sender, e );
+			UpdateUiState();
 		}
 
 		private void txtAppId_TextChanged( object sender, EventArgs e )
@@ -357,6 +423,13 @@ namespace B2CPolicyManagerUI
 		private void btnClearLog_Click( object sender, EventArgs e )
 		{
 			HTTPResponse.Text = "";
+		}
+
+		private void chkVerbose_CheckedChanged( object sender, EventArgs e )
+		{
+			Logger.MinimumLevel = chkVerbose.Checked
+				? LogLevel.Trace
+				: LogLevel.Information;
 		}
 
 		private void btnOpenFolderInVSCode_Click( object sender, EventArgs e )

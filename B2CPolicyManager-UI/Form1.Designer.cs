@@ -50,6 +50,7 @@
 			txtAppId = new System.Windows.Forms.TextBox();
 			label5 = new System.Windows.Forms.Label();
 			btnClearLog = new System.Windows.Forms.Button();
+			chkVerbose = new System.Windows.Forms.CheckBox();
 			btnOpenFolderInVSCode = new System.Windows.Forms.Button();
 			btnOpenInChrome = new System.Windows.Forms.Button();
 			btnOpenInEdge = new System.Windows.Forms.Button();
@@ -289,6 +290,18 @@
 			btnClearLog.Text = "Clear Log";
 			btnClearLog.UseVisualStyleBackColor = true;
 			btnClearLog.Click +=  btnClearLog_Click ;
+			//
+			// chkVerbose
+			//
+			chkVerbose.AutoSize = true;
+			chkVerbose.Location = new System.Drawing.Point( 100, 1602 );
+			chkVerbose.Margin = new System.Windows.Forms.Padding( 4, 5, 4, 5 );
+			chkVerbose.Name = "chkVerbose";
+			chkVerbose.Size = new System.Drawing.Size( 175, 36 );
+			chkVerbose.TabIndex = 35;
+			chkVerbose.Text = "Verbose log";
+			chkVerbose.UseVisualStyleBackColor = true;
+			chkVerbose.CheckedChanged +=  chkVerbose_CheckedChanged ;
 			// 
 			// btnOpenFolderInVSCode
 			// 
@@ -477,6 +490,7 @@
 			Controls.Add( btnOpenInChrome );
 			Controls.Add( btnOpenFolderInVSCode );
 			Controls.Add( btnClearLog );
+			Controls.Add( chkVerbose );
 			Controls.Add( btnCopyRunNow );
 			Controls.Add( label3 );
 			Controls.Add( label2 );
@@ -530,6 +544,7 @@
         private System.Windows.Forms.TextBox txtAppId;
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Button btnClearLog;
+        private System.Windows.Forms.CheckBox chkVerbose;
         private System.Windows.Forms.Button btnOpenFolderInVSCode;
         private System.Windows.Forms.Button btnOpenInChrome;
         private System.Windows.Forms.Button btnOpenInEdge;

@@ -14,6 +14,8 @@ namespace B2CPolicyManagerUI
 	{
 		private Action<String> _writer { get; }
 
+		public LogLevel MinimumLevel { get; set; } = LogLevel.Information;
+
 		public ActionLogger( Action<String> writer )
 		{
 			_writer = writer;
@@ -22,7 +24,7 @@ namespace B2CPolicyManagerUI
 			=> default;
 
 		public bool IsEnabled( LogLevel logLevel )
-			=> true;
+			=> logLevel >= MinimumLevel;
 
 		public void Log<TState>( LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter )
 		{

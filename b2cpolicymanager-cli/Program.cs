@@ -132,12 +132,18 @@ await parserResult
 				}
 			}
 
+			var fetched = 0;
+
 			await foreach( var policy in policyManager.GetPolicyDefinitionsAsync( logger, policies ) )
 			{
 				var path = Path.Join( opts.Folder, Path.ChangeExtension( policy.Id, ".xml" ) );
 
 				await File.WriteAllTextAsync( path, policy.Text );
+				logger.LogDebug( "Saved policy {Policy} to {Path}", policy.Id, path );
+				fetched++;
 			}
+
+			logger.LogInformation( "Fetched {Count} of {Total} policies", fetched, policies.Count() );
 		},
 		async ( DeployOptions opts ) =>
 		{
