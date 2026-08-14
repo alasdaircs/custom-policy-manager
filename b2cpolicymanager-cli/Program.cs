@@ -143,7 +143,12 @@ await parserResult
 		{
 			var fileNames = opts.PolicyNames
 				.SelectMany(
-					policyName => Directory.EnumerateFiles( opts.Folder, Path.ChangeExtension( policyName, ".xml" ) )
+					policyName => Directory.EnumerateFiles(
+						opts.Folder,
+						Path.ChangeExtension( policyName, ".xml" ),
+						// File names should match policy names case-insensitively even on Linux
+						new EnumerationOptions { MatchCasing = MatchCasing.CaseInsensitive }
+					)
 				);
 
 			await policyManager.DeployPoliciesAsync( logger, fileNames );

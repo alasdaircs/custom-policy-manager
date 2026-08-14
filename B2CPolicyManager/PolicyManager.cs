@@ -65,7 +65,7 @@ namespace B2CPolicyManager
 				// do the upload
 				foreach( var policy in orderedPolicies )
 				{
-					response = await HttpHelper.HttpPutIDAsync( Constants.TrustFrameworkPolicyByIDUriPUT, policy.Id, policy.Text, cancellation );
+					response = await HttpHelper.HttpPutIDAsync( Constants.TrustFrameworkPolicyByIDUriPUT, policy.Id.ToUpperInvariant(), policy.Text, cancellation );
 					if( response.IsSuccessStatusCode )
 					{
 						Logger.LogInformation( "Successfully updated policy {0}", policy.Id );
@@ -121,7 +121,8 @@ namespace B2CPolicyManager
 					yield break;
 				}
 
-				var response = await HttpHelper.HttpGetIDAsync( Constants.TrustFrameworkPolicyByIDUriPUT, policyName, cancellation );
+				// The get-by-id endpoint is case-sensitive; the tenant stores policy ids in uppercase
+				var response = await HttpHelper.HttpGetIDAsync( Constants.TrustFrameworkPolicyByIDUriPUT, policyName.ToUpperInvariant(), cancellation );
 				string content = await response.Content.ReadAsStringAsync();
 
 				if( response.IsSuccessStatusCode )
@@ -131,7 +132,7 @@ namespace B2CPolicyManager
 				}
 				else
 				{
-					Logger.LogError( "Failed to get policy definition {Policy}", policyName );
+					Logger.LogError( "Failed to get policy definition {Policy}: {Status} {Error}", policyName, response.StatusCode, content );
 				}
 			}
 		}
@@ -167,7 +168,7 @@ namespace B2CPolicyManager
 			HttpResponseMessage response;
 
 			Logger.LogInformation( "Deleting policy {0}", PolicyName );
-			response = await HttpHelper.HttpDeleteIDAsync( Constants.TrustFrameworkPolicyByIDUri, PolicyName.ToUpper(), cancellation );
+			response = await HttpHelper.HttpDeleteIDAsync( Constants.TrustFrameworkPolicyByIDUri, PolicyName.ToUpperInvariant(), cancellation );
 
 			if( response.IsSuccessStatusCode )
 			{
