@@ -18,8 +18,11 @@ namespace b2cpolicymanager_cli
 		[Option( 'a', "appid", Required = true, HelpText = "The application id - GUID of App Registration in Entra ID" )]
 		public Guid AppId { get; set; }
 
-		[Option( 's', "appsecret", Required = true,  HelpText = "The application secret from the App Registration in Entra ID - DO NOT STORE THIS" )]
+		[Option( 's', "appsecret", SetName = "secret", Required = false, HelpText = "The application secret from the App Registration in Entra ID - DO NOT STORE THIS. Required unless --interactive is used." )]
 		public String AppSecret { get; set; } = "";
+
+		[Option( 'i', "interactive", SetName = "interactive", Default = false, Required = false, HelpText = "Sign in interactively in a browser instead of using an application secret. The App Registration must allow public client flows with an http://localhost redirect URI." )]
+		public Boolean Interactive { get; set; }
 
 		[Verb( "list", HelpText = "List the policies in the tenant" )]
 		public class ListOptions :Options

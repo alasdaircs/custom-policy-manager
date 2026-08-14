@@ -55,6 +55,9 @@ ILogger logger = loggerFactory.CreateLogger<Program>();
 if( options == null )
 {
 	logger.LogCritical( "Invalid command line options" );
+
+	// Environment.Exit bypasses the using disposal, losing queued console log messages
+	loggerFactory.Dispose();
 	Environment.Exit( 1 );
 }
 
@@ -69,11 +72,30 @@ logger.LogDebug(
 	) 
 );
 
-var authHelper = new ConfidentialAuthenticationHelper(
-	options.TenantId,
-	options.AppId,
-	options.AppSecret
-);
+AuthenticationHelperBase authHelper;
+
+if( options.Interactive )
+{
+	authHelper = new PublicAuthenticationHelper(
+		options.TenantId,
+		options.AppId
+	);
+}
+else
+{
+	if( String.IsNullOrEmpty( options.AppSecret ) )
+	{
+		logger.LogCritical( "Either --appsecret or --interactive must be supplied" );
+		loggerFactory.Dispose();
+		Environment.Exit( 1 );
+	}
+
+	authHelper = new ConfidentialAuthenticationHelper(
+		options.TenantId,
+		options.AppId,
+		options.AppSecret
+	);
+}
 
  var policyManager = new PolicyManager( authHelper );
 
@@ -129,6 +151,7 @@ await parserResult
 		errs =>
 		{
 			logger.LogError( "Invalid command line options" );
+			loggerFactory.Dispose();
 			Environment.Exit( 1 );
 
 			// never gets here, but the compiler doesn't know that

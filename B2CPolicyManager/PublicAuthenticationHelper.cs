@@ -14,8 +14,6 @@ using Microsoft.Identity.Client;
 
 namespace B2CPolicyManager
 {
-	// Windows-only via TokenCacheHelper's DPAPI token cache
-	[SupportedOSPlatform( "windows" )]
 	public class PublicAuthenticationHelper
 		: AuthenticationHelperBase
 	{
@@ -34,7 +32,14 @@ namespace B2CPolicyManager
 				// .WithDefaultRedirectUri()
 				.WithRedirectUri( "http://localhost" )
 				.Build();
-			TokenCacheHelper.EnableSerialization( _publicApp.UserTokenCache );
+
+			// The persistent token cache uses DPAPI, which has no cross-platform
+			// implementation; elsewhere MSAL's in-memory cache still avoids
+			// repeated prompts within a single process
+			if( OperatingSystem.IsWindows() )
+			{
+				TokenCacheHelper.EnableSerialization( _publicApp.UserTokenCache );
+			}
 		}
 
 		/// <summary>
